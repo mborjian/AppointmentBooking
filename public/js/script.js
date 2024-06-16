@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateTimeSelect(selectElement) {
-        selectElement.innerHTML = '';  // Clear existing options
         timeSlots.forEach(slot => {
             const option = document.createElement('option');
             option.value = slot;
@@ -219,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         registerSection.classList.add('d-none');
         bookingSection.classList.add('d-none');
         appointmentsSection.classList.remove('d-none');
+        loadAppointments();
     });
 
     navLogout.addEventListener('click', async () => {
