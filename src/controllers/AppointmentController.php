@@ -2,6 +2,7 @@
 
 namespace AppointmentBooking\controllers;
 
+use AppointmentBooking\database\Connection;
 use AppointmentBooking\models\Appointment;
 
 class AppointmentController
@@ -13,24 +14,38 @@ class AppointmentController
         $this->appointmentModel = new Appointment();
     }
 
-    public function book($userId, $date, $start_time, $end_time): array
+
+    public function book(): void
     {
-        if ($this->appointmentModel->bookAppointment($userId, $date, $start_time, $end_time)) {
-            return ['status' => 'success', 'message' => 'Appointment booked successfully'];
+        $data = json_decode(file_get_contents('php://input'), true);
+        $userId = $data['user_id'];
+        $date = $data['date'];
+        $startTime = $data['start_time'];
+        $endTime = $data['end_time'];
+
+        if ($this->appointmentModel->bookAppointment($userId, $date, $startTime, $endTime)) {
+            echo json_encode(['status' => 'success', 'message' => 'Appointment booked successfully']);
         }
-        return ['status' => 'error', 'message' => 'Failed to book appointment. It may overlap with an existing appointment or the end time is before the start time.'];
+        echo json_encode(['status' => 'error', 'message' => 'Error booking appointment']);
     }
 
-    public function cancel($appointmentId): array
+
+    public function cancel(): void
     {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $appointmentId = $data['appointment_id'];
+
         if ($this->appointmentModel->cancelAppointment($appointmentId)) {
-            return ['status' => 'success', 'message' => 'Appointment cancelled successfully'];
+            echo json_encode(['status' => 'success', 'message' => 'Appointment cancelled successfully']);
         }
-        return ['status' => 'error', 'message' => 'Failed to cancel appointment'];
+        echo json_encode(['status' => 'error', 'message' => 'Error cancelling appointment']);
     }
 
-    public function view($date): false|array
+
+    public function getAppointments(): void
     {
-        return $this->appointmentModel->getAppointments($date);
+        $date = $_GET['date'];
+        $appointments = $this->appointmentModel->getAppointments($date);
+        echo json_encode($appointments);
     }
 }

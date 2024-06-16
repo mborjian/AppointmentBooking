@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const navRegister = document.getElementById('nav-register');
     const navBookAppointment = document.getElementById('nav-book-appointment');
     const navViewAppointments = document.getElementById('nav-view-appointments');
+    const navLogout = document.getElementById('nav-logout');
+    const navLogoutItem = document.getElementById('nav-logout-item');
 
     let currentUser = null;
 
@@ -20,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function generateTimeSlots() {
         const slots = [];
-        for (let hour = 0; hour < 12; hour++) {
+        for (let hour = 8; hour < 18; hour++) {
             for (let minute = 0; minute < 60; minute += 30) {
                 const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
                 slots.push(time);
@@ -30,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateTimeSelect(selectElement) {
+        selectElement.innerHTML = '';  // Clear existing options
         timeSlots.forEach(slot => {
             const option = document.createElement('option');
             option.value = slot;
@@ -40,6 +43,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     populateTimeSelect(appointmentStartTime);
     populateTimeSelect(appointmentEndTime);
+
+    async function checkAuthStatus() {
+        const response = await fetch('/check-auth', {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'}
+        });
+
+        const result = await response.json();
+        if (result.status === 'authenticated') {
+            currentUser = result.user;
+            navLogoutItem.classList.remove('d-none');
+            navLogin.classList.add('d-none');
+            navRegister.classList.add('d-none');
+            navBookAppointment.classList.remove('d-none');
+            navViewAppointments.classList.remove('d-none');
+            loginSection.classList.add('d-none');
+            registerSection.classList.add('d-none');
+            bookingSection.classList.remove('d-none');
+            appointmentsSection.classList.remove('d-none');
+        } else {
+            currentUser = null;
+            navLogoutItem.classList.add('d-none');
+            navLogin.classList.remove('d-none');
+            navRegister.classList.remove('d-none');
+            navBookAppointment.classList.add('d-none');
+            navViewAppointments.classList.add('d-none');
+            loginSection.classList.remove('d-none');
+            registerSection.classList.add('d-none');
+            bookingSection.classList.add('d-none');
+            appointmentsSection.classList.add('d-none');
+        }
+    }
 
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -53,7 +88,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const result = await response.json();
-        alert(result.message);
+        if (result.status === 'success') {
+            currentUser = result.user;
+            checkAuthStatus();
+        } else {
+            alert(result.message);
+        }
     });
 
     loginForm.addEventListener('submit', async (e) => {
@@ -70,11 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await response.json();
         if (result.status === 'success') {
             currentUser = result.user;
-            loginSection.style.display = 'none';
-            registerSection.style.display = 'none';
-            bookingSection.style.display = 'block';
-            appointmentsSection.style.display = 'block';
-            loadAppointments().then(r => {});
+            checkAuthStatus();
         } else {
             alert(result.message);
         }
@@ -82,25 +118,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     bookingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!currentUser) {
+            alert('Please log in to book an appointment');
+            return;
+        }
+        const userId = currentUser.id;
         const date = document.getElementById('appointment-date').value;
-        const start_time = appointmentStartTime.value;
-        const end_time = appointmentEndTime.value;
+        const startTime = document.getElementById('appointment-start-time').value;
+        const endTime = document.getElementById('appointment-end-time').value;
 
         const response = await fetch('/book', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user_id: currentUser.id, date, start_time, end_time})
+            body: JSON.stringify({user_id: userId, date, start_time: startTime, end_time: endTime})
         });
 
         const result = await response.json();
         alert(result.message);
         if (result.status === 'success') {
-            loadAppointments().then(r => {});
+            loadAppointments();
         }
     });
 
     async function loadAppointments() {
-        const date = document.getElementById('appointment-date').value;
+        const date = document.getElementById('appointment-date-view').value;
 
         const response = await fetch(`/appointments?date=${date}`, {
             method: 'GET',
@@ -118,23 +159,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tdStatus = document.createElement('td');
             const appointment = appointments.find(app => app.start_time === slot);
+
             if (appointment) {
                 tdStatus.textContent = 'Booked';
                 const tdAction = document.createElement('td');
                 const cancelButton = document.createElement('button');
                 cancelButton.textContent = 'Cancel';
-                cancelButton.className = 'btn btn-danger';
+                cancelButton.classList.add('btn', 'btn-danger');
                 cancelButton.addEventListener('click', () => cancelAppointment(appointment.id));
                 tdAction.appendChild(cancelButton);
                 tr.appendChild(tdAction);
             } else {
                 tdStatus.textContent = 'Available';
-                const tdAction = document.createElement('td');
-                tdAction.textContent = '-';
-                tr.appendChild(tdAction);
+                tr.appendChild(document.createElement('td'));
             }
-            tr.appendChild(tdStatus);
 
+            tr.appendChild(tdStatus);
             appointmentsTableBody.appendChild(tr);
         });
     }
@@ -149,36 +189,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await response.json();
         alert(result.message);
         if (result.status === 'success') {
-            loadAppointments().then(r => {});
+            loadAppointments();
         }
     }
 
     navLogin.addEventListener('click', () => {
-        loginSection.style.display = 'block';
-        registerSection.style.display = 'none';
-        bookingSection.style.display = 'none';
-        appointmentsSection.style.display = 'none';
+        loginSection.classList.remove('d-none');
+        registerSection.classList.add('d-none');
+        bookingSection.classList.add('d-none');
+        appointmentsSection.classList.add('d-none');
     });
 
     navRegister.addEventListener('click', () => {
-        loginSection.style.display = 'none';
-        registerSection.style.display = 'block';
-        bookingSection.style.display = 'none';
-        appointmentsSection.style.display = 'none';
+        loginSection.classList.add('d-none');
+        registerSection.classList.remove('d-none');
+        bookingSection.classList.add('d-none');
+        appointmentsSection.classList.add('d-none');
     });
 
     navBookAppointment.addEventListener('click', () => {
-        loginSection.style.display = 'none';
-        registerSection.style.display = 'none';
-        bookingSection.style.display = 'block';
-        appointmentsSection.style.display = 'none';
+        loginSection.classList.add('d-none');
+        registerSection.classList.add('d-none');
+        bookingSection.classList.remove('d-none');
+        appointmentsSection.classList.add('d-none');
     });
 
     navViewAppointments.addEventListener('click', () => {
-        loginSection.style.display = 'none';
-        registerSection.style.display = 'none';
-        bookingSection.style.display = 'none';
-        appointmentsSection.style.display = 'block';
-        loadAppointments().then(r => {});
+        loginSection.classList.add('d-none');
+        registerSection.classList.add('d-none');
+        bookingSection.classList.add('d-none');
+        appointmentsSection.classList.remove('d-none');
     });
+
+    navLogout.addEventListener('click', async () => {
+        const response = await fetch('/logout', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            currentUser = null;
+            checkAuthStatus();
+        }
+    });
+
+    checkAuthStatus();
 });
