@@ -1,0 +1,93 @@
+:root {
+    --timeHeight: 40px;
+    --calBgColor: #fff1f8;
+    --eventBorderColor: #f2d3d8;
+}
+
+body {
+    font-family: system-ui, sans-serif;
+    background-color: #f8f9fa;
+}
+
+h1, h2 {
+    text-align: center;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding-top: 50px;
+}
+
+#auth-section, #booking-section {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 20px;
+    background-color: #fff;
+}
+
+#auth-section h2, #booking-section h2 {
+    margin-bottom: 20px;
+}
+
+.calendar {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: auto 1fr;
+    margin: 2rem;
+}
+
+.timeline {
+    display: grid;
+    grid-template-rows: repeat(var(--numHours), var(--timeHeight));
+    margin-top: calc(var(--timeHeight) / (-5));
+}
+
+.days {
+    display: grid;
+    grid-column: 2;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.events {
+    display: grid;
+    grid-template-rows: repeat(var(--numHours), var(--timeHeight));
+    border-radius: 5px;
+}
+
+.event.empty {
+    border: 1px dashed #ccc;
+    cursor: pointer;
+}
+
+.event.empty:hover {
+    background-color: #f0f0f0;
+}
+
+.title {
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+}
+
+.event {
+    border: 1px solid var(--eventBorderColor);
+    border-radius: 5px;
+    padding: 0.5rem;
+    margin: 0;
+    background: white;
+}
+
+.date {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 50px;
+    background-color: var(--calBgColor);
+    border: 1px dashed #ccc;
+}
+
+.date-day {
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+}
