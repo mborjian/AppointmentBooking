@@ -16,6 +16,25 @@ class Appointment
 
     public function bookAppointment($userId, $date, $start_time, $end_time): bool
     {
+        if (strtotime($end_time) <= strtotime($start_time)) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM appointments WHERE user_id = :user_id AND date = :date AND ((start_time < :end_time AND end_time > :start_time))'
+        );
+
+        $stmt->execute([
+            'user_id' => $userId,
+            'date' => $date,
+            'start_time' => $start_time,
+            'end_time' => $end_time
+        ]);
+
+        if ($stmt->fetchColumn() > 0) {
+            return false;
+        }
+
         $stmt = $this->db->prepare(
             'INSERT INTO appointments (user_id, date, start_time, end_time) VALUES (:user_id, :date, :start_time, :end_time)'
         );
