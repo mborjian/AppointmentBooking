@@ -10,16 +10,18 @@ class Connection
     private static ?Connection $instance = null;
     private PDO $connection;
 
-
-    private function __construct()
+    private function __construct(bool $includeDbName = true)
     {
         $config = include __DIR__ . '/../../config/database.php';
 
-        $this->createDatabaseIfNotExists($config['dbname']);
-
         try {
+            $connectionString = "mysql:host={$config['host']}:{$config['port']}";
+            if ($includeDbName) {
+                $connectionString .= ";dbname={$config['dbname']}";
+            }
+
             $this->connection = new PDO(
-                "mysql:host={$config['host']}:{$config['port']};dbname={$config['dbname']}",
+                $connectionString,
                 $config['user'],
                 $config['password']
             );
@@ -29,10 +31,10 @@ class Connection
         }
     }
 
-    public static function getInstance(): ?Connection
+    public static function getInstance(bool $includeDbName = true): ?Connection
     {
         if (self::$instance === null) {
-            self::$instance = new self();
+            self::$instance = new self($includeDbName);
         }
 
         return self::$instance;
@@ -41,21 +43,5 @@ class Connection
     public function getConnection(): PDO
     {
         return $this->connection;
-    }
-
-    private function createDatabaseIfNotExists(string $dbName): void
-    {
-        $config = include __DIR__ . '/../../config/database.php';
-
-        $dsn = "mysql:host=" . $config['host'] . ':' . $config['port'];
-        $user = $config['user'];
-        $password = $config['password'];
-
-        try {
-            $pdo = new PDO($dsn, $user, $password);
-            $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName`");
-        } catch (PDOException $e) {
-            die("Database creation failed: " . $e->getMessage());
-        }
     }
 }
