@@ -31,6 +31,9 @@ if ($uri === '/register' && $method === 'POST') {
     $appointmentController->cancel();
 } elseif ($uri === '/appointments' && $method === 'GET') {
     $appointmentController->getAppointments();
+} elseif ($uri === '/calendar' && $method === 'GET') {
+    $calendarData = $appointmentController->getCalendarData();
+    echo json_encode(['status' => 'success', 'days' => $calendarData]);
 } else {
     http_response_code(404);
     echo json_encode(['status' => 'error', 'message' => 'Not Found']);

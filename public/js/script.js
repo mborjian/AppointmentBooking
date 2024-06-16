@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerSection = document.getElementById('register-section');
     const bookingSection = document.getElementById('booking-section');
     const appointmentsSection = document.getElementById('appointments-section');
+    const calendarSection = document.getElementById('calendar-section');
     const appointmentsTableBody = document.getElementById('appointments-table').querySelector('tbody');
     const appointmentStartTime = document.getElementById('appointment-start-time');
     const appointmentEndTime = document.getElementById('appointment-end-time');
@@ -75,44 +76,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const username = document.getElementById('reg-username').value;
-        const password = document.getElementById('reg-password').value;
+    checkAuthStatus();
 
-        const response = await fetch('/register', {
+    navLogin.addEventListener('click', () => showSection('login'));
+
+    navRegister.addEventListener('click', () => showSection('register'));
+
+    navBookAppointment.addEventListener('click', () => showSection('booking'));
+
+    navViewAppointments.addEventListener('click', () => {
+        showSection('appointments');
+        loadAppointments();
+    });
+
+    navLogout.addEventListener('click', async () => {
+        fetch('logout', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username, password})
-        });
-
-        const result = await response.json();
-        if (result.status === 'success') {
-            currentUser = result.user;
-            checkAuthStatus();
-        } else {
-            alert(result.message);
-        }
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data)
+                if (data.status === 'success') {
+                    currentUser = null;
+                    checkAuthStatus();
+                    showSection('login');
+                } else {
+                    alert(data.message);
+                }
+            });
     });
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const username = document.getElementById('login-username').value;
         const password = document.getElementById('login-password').value;
-
-        const response = await fetch('/login', {
+        fetch('login', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({username, password})
-        });
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({username: username, password: password}),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    currentUser = data.user;
+                    checkAuthStatus();
+                    showSection('calendar');
+                } else {
+                    alert(data.message);
+                }
+            });
+    });
 
-        const result = await response.json();
-        if (result.status === 'success') {
-            currentUser = result.user;
-            checkAuthStatus();
-        } else {
-            alert(result.message);
-        }
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('reg-username').value;
+        const password = document.getElementById('reg-password').value;
+        fetch('register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({username: username, password: password}),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    currentUser = data.user;
+                    checkAuthStatus();
+                    // showSection('login');
+                } else {
+                    alert(data.message);
+                }
+            });
     });
 
     bookingForm.addEventListener('submit', async (e) => {
@@ -126,113 +164,156 @@ document.addEventListener('DOMContentLoaded', () => {
         const startTime = document.getElementById('appointment-start-time').value;
         const endTime = document.getElementById('appointment-end-time').value;
 
-        const response = await fetch('/book', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user_id: userId, date, start_time: startTime, end_time: endTime})
-        });
-
-        const result = await response.json();
-        alert(result.message);
-        if (result.status === 'success') {
-            loadAppointments();
+        if (startTime >= endTime) {
+            alert('End time must be after start time');
+            return;
         }
+        fetch('book', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({user_id: userId, date: date, start_time: startTime, end_time: endTime}),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Appointment booked successfully');
+                    loadAppointments();
+                } else {
+                    alert(data.message);
+                }
+            });
     });
 
     async function loadAppointments() {
-        const date = document.getElementById('appointment-date-view').value;
 
-        const response = await fetch(`/appointments?date=${date}`, {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json'}
-        });
-
-        const appointments = await response.json();
-        appointmentsTableBody.innerHTML = '';
-
-        timeSlots.forEach(slot => {
-            const tr = document.createElement('tr');
-            const tdTime = document.createElement('td');
-            tdTime.textContent = slot;
-            tr.appendChild(tdTime);
-
-            const tdStatus = document.createElement('td');
-            const appointment = appointments.find(app => app.start_time === slot);
-
-            if (appointment) {
-                tdStatus.textContent = 'Booked';
-                const tdAction = document.createElement('td');
-                const cancelButton = document.createElement('button');
-                cancelButton.textContent = 'Cancel';
-                cancelButton.classList.add('btn', 'btn-danger');
-                cancelButton.addEventListener('click', () => cancelAppointment(appointment.id));
-                tdAction.appendChild(cancelButton);
-                tr.appendChild(tdAction);
-            } else {
-                tdStatus.textContent = 'Available';
-                tr.appendChild(document.createElement('td'));
-            }
-
-            tr.appendChild(tdStatus);
-            appointmentsTableBody.appendChild(tr);
-        });
+        var date = document.getElementById('appointment-date-view').value;
+        fetch('appointments?date=' + date)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    var tbody = document.getElementById('appointments-table').querySelector('tbody');
+                    tbody.innerHTML = '';
+                    data.appointments.forEach(function (appointment) {
+                        var tr = document.createElement('tr');
+                        tr.innerHTML = '<td>' + appointment.time + '</td><td>' + appointment.status + '</td><td><button class="btn btn-danger btn-sm" onclick="cancelAppointment(' + appointment.id + ')">Cancel</button></td>';
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    alert(data.message);
+                }
+            });
     }
 
     async function cancelAppointment(appointmentId) {
-        const response = await fetch('/cancel', {
+        fetch('cancel', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({appointment_id: appointmentId})
-        });
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({appointment_id: appointmentId}),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadAppointments();
+                } else {
+                    alert(data.message);
+                }
+            });
+    }
 
-        const result = await response.json();
-        alert(result.message);
-        if (result.status === 'success') {
-            loadAppointments();
+    function showSection(section) {
+        loginSection.classList.add('d-none');
+        registerSection.classList.add('d-none');
+        bookingSection.classList.add('d-none');
+        appointmentsSection.classList.add('d-none');
+        calendarSection.classList.add('d-none');
+
+        switch (section) {
+            case 'login':
+                loginSection.classList.remove('d-none');
+                break;
+            case 'register':
+                registerSection.classList.remove('d-none');
+                break;
+            case 'booking':
+                bookingSection.classList.remove('d-none');
+                break;
+            case 'appointments':
+                appointmentsSection.classList.remove('d-none');
+                break;
+            case 'calendar':
+                calendarSection.classList.remove('d-none');
+                loadCalendar();
+                break;
         }
     }
 
-    navLogin.addEventListener('click', () => {
-        loginSection.classList.remove('d-none');
-        registerSection.classList.add('d-none');
-        bookingSection.classList.add('d-none');
-        appointmentsSection.classList.add('d-none');
-    });
+    function loadCalendar() {
+        fetch('calendar')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    var calendar = document.getElementById('calendar');
+                    calendar.innerHTML = '';
 
-    navRegister.addEventListener('click', () => {
-        loginSection.classList.add('d-none');
-        registerSection.classList.remove('d-none');
-        bookingSection.classList.add('d-none');
-        appointmentsSection.classList.add('d-none');
-    });
+                    var timeline = document.createElement('div');
+                    timeline.classList.add('timeline');
+                    for (var i = 7; i < 17; i++) {
+                        var timeSlot = document.createElement('div');
+                        timeSlot.textContent = i + ':00';
+                        timeline.appendChild(timeSlot);
+                        timeSlot = document.createElement('div');
+                        timeSlot.textContent = i + ':30';
+                        timeline.appendChild(timeSlot);
+                    }
+                    calendar.appendChild(timeline);
 
-    navBookAppointment.addEventListener('click', () => {
-        loginSection.classList.add('d-none');
-        registerSection.classList.add('d-none');
-        bookingSection.classList.remove('d-none');
-        appointmentsSection.classList.add('d-none');
-    });
+                    data.days.forEach(function (day) {
+                        var dayColumn = document.createElement('div');
+                        dayColumn.classList.add('day');
+                        dayColumn.textContent = day.name;
+                        calendar.appendChild(dayColumn);
 
-    navViewAppointments.addEventListener('click', () => {
-        loginSection.classList.add('d-none');
-        registerSection.classList.add('d-none');
-        bookingSection.classList.add('d-none');
-        appointmentsSection.classList.remove('d-none');
-        loadAppointments();
-    });
+                        var occupiedCells = {};
 
-    navLogout.addEventListener('click', async () => {
-        const response = await fetch('/logout', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'}
-        });
+                        day.appointments.forEach(function (appointment) {
+                            var startTime = appointment.start_time;
+                            var endTime = appointment.end_time;
+                            var startHour = parseInt(startTime.split(':')[0]);
+                            var startMinute = parseInt(startTime.split(':')[1]);
+                            var endHour = parseInt(endTime.split(':')[0]);
+                            var endMinute = parseInt(endTime.split(':')[1]);
 
-        const result = await response.json();
-        if (result.status === 'success') {
-            currentUser = null;
-            checkAuthStatus();
-        }
-    });
+                            var startRow = (startHour - 7) * 2 + (startMinute / 30) + 1;
+                            var endRow = (endHour - 7) * 2 + (endMinute / 30) + 1;
 
-    checkAuthStatus();
+                            for (var row = startRow; row < endRow; row++) {
+                                occupiedCells[row] = true;
+                            }
+
+                            var eventDiv = document.createElement('div');
+                            eventDiv.classList.add('event');
+                            eventDiv.style.gridRow = startRow + ' / ' + endRow;
+                            eventDiv.style.backgroundColor = appointment.bgColor;
+                            eventDiv.textContent = appointment.text;
+                            dayColumn.appendChild(eventDiv);
+                        });
+
+                        for (var row = 1; row <= 20; row++) {
+                            if (!occupiedCells[row]) {
+                                var emptyDiv = document.createElement('div');
+                                emptyDiv.classList.add('event', 'empty');
+                                emptyDiv.dataset.startTime = (7 + Math.floor((row - 1) / 2)) + ':' + ((row - 1) % 2) * 30;
+                                dayColumn.appendChild(emptyDiv);
+                            }
+                        }
+                    });
+                } else {
+                    alert(data.message);
+                }
+            });
+    }
 });
