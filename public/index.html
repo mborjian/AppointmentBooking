@@ -2,47 +2,77 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Appointment Booking System</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<h1>Appointment Booking System</h1>
+<div class="container">
+    <h1 class="mt-5">Appointment Booking System</h1>
 
-<div id="auth-section">
-    <h2>Register</h2>
-    <form id="register-form">
-        <label for="reg-username">Username:</label>
-        <input type="text" id="reg-username" required>
-        <label for="reg-password">Password:</label>
-        <input type="password" id="reg-password" required>
-        <button type="submit">Register</button>
-    </form>
+    <div id="auth-section" class="mt-5">
+        <h2>Register</h2>
+        <form id="register-form" class="mb-4">
+            <div class="mb-3">
+                <label for="reg-username" class="form-label">Username:</label>
+                <input type="text" id="reg-username" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="reg-password" class="form-label">Password:</label>
+                <input type="password" id="reg-password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Register</button>
+        </form>
 
-    <h2>Login</h2>
-    <form id="login-form">
-        <label for="login-username">Username:</label>
-        <input type="text" id="login-username" required>
-        <label for="login-password">Password:</label>
-        <input type="password" id="login-password" required>
-        <button type="submit">Login</button>
-    </form>
+        <h2>Login</h2>
+        <form id="login-form">
+            <div class="mb-3">
+                <label for="login-username" class="form-label">Username:</label>
+                <input type="text" id="login-username" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="login-password" class="form-label">Password:</label>
+                <input type="password" id="login-password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+    </div>
+
+    <div id="booking-section" class="mt-5" style="display:none;">
+        <h2>Book an Appointment</h2>
+        <form id="booking-form" class="mb-4">
+            <div class="mb-3">
+                <label for="appointment-date" class="form-label">Date:</label>
+                <input type="date" id="appointment-date" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="appointment-start-time" class="form-label">Start Time:</label>
+                <select id="appointment-start-time" class="form-select" required></select>
+            </div>
+            <div class="mb-3">
+                <label for="appointment-end-time" class="form-label">End Time:</label>
+                <select id="appointment-end-time" class="form-select" required></select>
+            </div>
+            <button type="submit" class="btn btn-primary">Book</button>
+        </form>
+
+        <h2>Appointments</h2>
+        <table id="appointments-table" class="table table-bordered">
+            <thead class="thead-light">
+            <tr>
+                <th>Time Slot</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<div id="booking-section" style="display:none;">
-    <h2>Book an Appointment</h2>
-    <form id="booking-form">
-        <label for="appointment-date">Date:</label>
-        <input type="date" id="appointment-date" required>
-        <label for="appointment-time">Time:</label>
-        <input type="time" id="appointment-time" required>
-        <button type="submit">Book</button>
-    </form>
-
-    <h2>Appointments</h2>
-    <div id="appointments-list"></div>
-</div>
-
+<script src="js/bootstrap.bundle.min.js"></script>
 <script src="js/script.js"></script>
 </body>
 </html>

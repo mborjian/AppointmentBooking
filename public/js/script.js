@@ -4,9 +4,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookingForm = document.getElementById('booking-form');
     const authSection = document.getElementById('auth-section');
     const bookingSection = document.getElementById('booking-section');
-    const appointmentsList = document.getElementById('appointments-list');
+    const appointmentsTableBody = document.getElementById('appointments-table').querySelector('tbody');
+    const appointmentStartTime = document.getElementById('appointment-start-time');
+    const appointmentEndTime = document.getElementById('appointment-end-time');
 
     let currentUser = null;
+
+    const timeSlots = generateTimeSlots();
+
+    function generateTimeSlots() {
+        const slots = [];
+        for (let hour = 0; hour < 12; hour++) {
+            for (let minute = 0; minute < 60; minute += 30) {
+                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                slots.push(time);
+            }
+        }
+        return slots;
+    }
+
+    function populateTimeSelect(selectElement) {
+        timeSlots.forEach(slot => {
+            const option = document.createElement('option');
+            option.value = slot;
+            option.textContent = slot;
+            selectElement.appendChild(option);
+        });
+    }
+
+    populateTimeSelect(appointmentStartTime);
+    populateTimeSelect(appointmentEndTime);
 
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -20,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const result = await response.json();
-        alert(result.status === 'success' ? 'Registration successful' : 'Registration failed');
+        alert(result.message);
     });
 
     loginForm.addEventListener('submit', async (e) => {
@@ -41,40 +68,58 @@ document.addEventListener('DOMContentLoaded', () => {
             bookingSection.style.display = 'block';
             await loadAppointments();
         } else {
-            alert('Login failed');
+            alert(result.message);
         }
     });
 
     bookingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const date = document.getElementById('appointment-date').value;
-        const time = document.getElementById('appointment-time').value;
+        const start_time = appointmentStartTime.value;
+        const end_time = appointmentEndTime.value;
 
         const response = await fetch('/book', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({user_id: currentUser.id, date, time})
+            body: JSON.stringify({user_id: currentUser.id, date, start_time, end_time})
         });
 
         const result = await response.json();
-        alert(result.status === 'success' ? 'Appointment booked' : 'Booking failed');
+        alert(result.message);
         await loadAppointments();
     });
 
     async function loadAppointments() {
         const date = document.getElementById('appointment-date').value;
-
         if (!date) return;
 
         const response = await fetch(`/appointments?date=${date}`);
         const appointments = await response.json();
 
-        appointmentsList.innerHTML = appointments.map(appointment => `
-            <div>
-                ${appointment.appointment_time} - 
-                <button onclick="cancelAppointment(${appointment.id})">Cancel</button>
-            </div>
-        `).join('');
+        appointmentsTableBody.innerHTML = '';
+        timeSlots.forEach(slot => {
+            const appointment = appointments.find(app => app.start_time === slot);
+            const row = document.createElement('tr');
+            const timeCell = document.createElement('td');
+            timeCell.textContent = slot;
+            row.appendChild(timeCell);
+
+            const statusCell = document.createElement('td');
+            const actionCell = document.createElement('td');
+            if (appointment) {
+                statusCell.textContent = 'Booked';
+                const cancelButton = document.createElement('button');
+                cancelButton.textContent = 'Cancel';
+                cancelButton.onclick = () => cancelAppointment(appointment.id);
+                actionCell.appendChild(cancelButton);
+            } else {
+                statusCell.textContent = 'Available';
+                actionCell.textContent = 'N/A';
+            }
+            row.appendChild(statusCell);
+            row.appendChild(actionCell);
+            appointmentsTableBody.appendChild(row);
+        });
     }
 
     window.cancelAppointment = async (id) => {
@@ -85,7 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const result = await response.json();
-        alert(result.status === 'success' ? 'Appointment cancelled' : 'Cancellation failed');
+        alert(result.message);
         await loadAppointments();
     };
+
+    document.getElementById('appointment-date').addEventListener('change', loadAppointments);
 });
