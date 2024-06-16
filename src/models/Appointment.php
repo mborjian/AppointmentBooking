@@ -14,16 +14,17 @@ class Appointment
         $this->db = Connection::getInstance()->getConnection();
     }
 
-    public function bookAppointment($userId, $date, $time): bool
+    public function bookAppointment($userId, $date, $start_time, $end_time): bool
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO appointments (user_id, appointment_date, appointment_time) VALUES (:user_id, :appointment_date, :appointment_time)'
+            'INSERT INTO appointments (user_id, date, start_time, end_time) VALUES (:user_id, :date, :start_time, :end_time)'
         );
 
         return $stmt->execute([
             'user_id' => $userId,
-            'appointment_date' => $date,
-            'appointment_time' => $time
+            'date' => $date,
+            'start_time' => $start_time,
+            'end_time' => $end_time
         ]);
     }
 
@@ -39,9 +40,9 @@ class Appointment
     public function getAppointments($date): false|array
     {
         $stmt = $this->db->prepare(
-            'SELECT * FROM appointments WHERE appointment_date = :appointment_date'
+            'SELECT * FROM appointments WHERE date = :date'
         );
-        $stmt->execute(['appointment_date' => $date]);
+        $stmt->execute(['date' => $date]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

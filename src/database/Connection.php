@@ -9,7 +9,7 @@ class Connection
 {
     private static ?Connection $instance = null;
     private PDO $connection;
-    
+
 
     private function __construct()
     {

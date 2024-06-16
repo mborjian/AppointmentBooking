@@ -13,9 +13,9 @@ class AppointmentController
         $this->appointmentModel = new Appointment();
     }
 
-    public function book($userId, $date, $time): bool
+    public function book($userId, $date, $start_time, $end_time): bool
     {
-        return $this->appointmentModel->bookAppointment($userId, $date, $time);
+        return $this->appointmentModel->bookAppointment($userId, $date, $start_time, $end_time);
     }
 
     public function cancel($appointmentId): bool
