@@ -9,14 +9,17 @@ class Connection
 {
     private static ?Connection $instance = null;
     private PDO $connection;
+    
 
     private function __construct()
     {
         $config = include __DIR__ . '/../../config/database.php';
 
+        $this->createDatabaseIfNotExists($config['dbname']);
+
         try {
             $this->connection = new PDO(
-                "mysql:host={$config['host']};dbname={$config['dbname']}",
+                "mysql:host={$config['host']}:{$config['port']};dbname={$config['dbname']}",
                 $config['user'],
                 $config['password']
             );
@@ -38,5 +41,21 @@ class Connection
     public function getConnection(): PDO
     {
         return $this->connection;
+    }
+
+    private function createDatabaseIfNotExists(string $dbName): void
+    {
+        $config = include __DIR__ . '/../../config/database.php';
+
+        $dsn = "mysql:host=" . $config['host'] . ':' . $config['port'];
+        $user = $config['user'];
+        $password = $config['password'];
+
+        try {
+            $pdo = new PDO($dsn, $user, $password);
+            $pdo->exec("CREATE DATABASE IF NOT EXISTS `$dbName`");
+        } catch (PDOException $e) {
+            die("Database creation failed: " . $e->getMessage());
+        }
     }
 }

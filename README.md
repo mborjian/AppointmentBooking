@@ -18,6 +18,8 @@ This is a simple appointment booking system developed in PHP. It allows users to
 git clone https://github.com/mborjian/AppointmentBooking.git
 cd AppointmentBooking
 composer install
+
+php scripts/setup_database.php
 ```
 
 ## Usage
