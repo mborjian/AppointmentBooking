@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Booking System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<h1>Appointment Booking System</h1>
+
+<div id="auth-section">
+    <h2>Register</h2>
+    <form id="register-form">
+        <label for="reg-username">Username:</label>
+        <input type="text" id="reg-username" required>
+        <label for="reg-password">Password:</label>
+        <input type="password" id="reg-password" required>
+        <button type="submit">Register</button>
+    </form>
+
+    <h2>Login</h2>
+    <form id="login-form">
+        <label for="login-username">Username:</label>
+        <input type="text" id="login-username" required>
+        <label for="login-password">Password:</label>
+        <input type="password" id="login-password" required>
+        <button type="submit">Login</button>
+    </form>
+</div>
+
+<div id="booking-section" style="display:none;">
+    <h2>Book an Appointment</h2>
+    <form id="booking-form">
+        <label for="appointment-date">Date:</label>
+        <input type="date" id="appointment-date" required>
+        <label for="appointment-time">Time:</label>
+        <input type="time" id="appointment-time" required>
+        <button type="submit">Book</button>
+    </form>
+
+    <h2>Appointments</h2>
+    <div id="appointments-list"></div>
+</div>
+
+<script src="js/script.js"></script>
+</body>
+</html>
