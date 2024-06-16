@@ -6,10 +6,15 @@
     <title>Appointment Booking System</title>
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --numHours: 20;
+        }
+    </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg sticky-top navbar-dark bg-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="#">Appointment Booking</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -106,8 +111,12 @@
             <tbody></tbody>
         </table>
     </div>
-</div>
 
+    <div id="calendar-section" class="d-none">
+        <h2>Calendar</h2>
+        <div class="calendar" id="calendar"></div>
+    </div>
+</div>
 
 <script src="js/bootstrap.bundle.min.js"></script>
 <script src="js/script.js"></script>

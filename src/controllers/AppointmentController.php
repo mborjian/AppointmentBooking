@@ -48,4 +48,40 @@ class AppointmentController
         $appointments = $this->appointmentModel->getAppointments($date);
         echo json_encode($appointments);
     }
+
+
+    public function getCalendarData(): array
+    {
+        $days = [];
+
+        $query = "SELECT * FROM days_table JOIN appointments_table ON days_table.id = appointments_table.day_id";
+        $result = $this->db->query($query);
+
+        while ($row = $result->fetch_assoc()) {
+            $dayId = $row['day_id'];
+            $dayName = $row['name'];
+            $startTime = $row['start_time'];
+            $endTime = $row['end_time'];
+
+            if (!isset($days[$dayId])) {
+                $days[$dayId] = [
+                    'name' => $dayName,
+                    'appointments' => []
+                ];
+            }
+
+            $appointment = new Appointment(
+                $row['id'],
+                $row['start_time'],
+                $row['end_time'],
+                $row['text'],
+                $row['bgColor']
+            );
+
+            $days[$dayId]['appointments'][] = $appointment;
+        }
+
+        return array_values($days);
+    }
+
 }
