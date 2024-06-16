@@ -22,6 +22,11 @@ composer install
 php scripts/setup_database.php
 ```
 
+or for clean installation:
+```bash
+php scripts/setup_database.php --drop
+```
+
 ## Usage
 ```bash
 php -S localhost:8000 -t public
