@@ -2,11 +2,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
     const bookingForm = document.getElementById('booking-form');
-    const authSection = document.getElementById('auth-section');
+    const loginSection = document.getElementById('login-section');
+    const registerSection = document.getElementById('register-section');
     const bookingSection = document.getElementById('booking-section');
+    const appointmentsSection = document.getElementById('appointments-section');
     const appointmentsTableBody = document.getElementById('appointments-table').querySelector('tbody');
     const appointmentStartTime = document.getElementById('appointment-start-time');
     const appointmentEndTime = document.getElementById('appointment-end-time');
+    const navLogin = document.getElementById('nav-login');
+    const navRegister = document.getElementById('nav-register');
+    const navBookAppointment = document.getElementById('nav-book-appointment');
+    const navViewAppointments = document.getElementById('nav-view-appointments');
 
     let currentUser = null;
 
@@ -64,9 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await response.json();
         if (result.status === 'success') {
             currentUser = result.user;
-            authSection.style.display = 'none';
+            loginSection.style.display = 'none';
+            registerSection.style.display = 'none';
             bookingSection.style.display = 'block';
-            await loadAppointments();
+            appointmentsSection.style.display = 'block';
+            loadAppointments().then(r => {});
         } else {
             alert(result.message);
         }
@@ -86,53 +94,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const result = await response.json();
         alert(result.message);
-        await loadAppointments();
+        if (result.status === 'success') {
+            loadAppointments().then(r => {});
+        }
     });
 
     async function loadAppointments() {
         const date = document.getElementById('appointment-date').value;
-        if (!date) return;
 
-        const response = await fetch(`/appointments?date=${date}`);
+        const response = await fetch(`/appointments?date=${date}`, {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'}
+        });
+
         const appointments = await response.json();
-
         appointmentsTableBody.innerHTML = '';
-        timeSlots.forEach(slot => {
-            const appointment = appointments.find(app => app.start_time === slot);
-            const row = document.createElement('tr');
-            const timeCell = document.createElement('td');
-            timeCell.textContent = slot;
-            row.appendChild(timeCell);
 
-            const statusCell = document.createElement('td');
-            const actionCell = document.createElement('td');
+        timeSlots.forEach(slot => {
+            const tr = document.createElement('tr');
+            const tdTime = document.createElement('td');
+            tdTime.textContent = slot;
+            tr.appendChild(tdTime);
+
+            const tdStatus = document.createElement('td');
+            const appointment = appointments.find(app => app.start_time === slot);
             if (appointment) {
-                statusCell.textContent = 'Booked';
+                tdStatus.textContent = 'Booked';
+                const tdAction = document.createElement('td');
                 const cancelButton = document.createElement('button');
                 cancelButton.textContent = 'Cancel';
-                cancelButton.onclick = () => cancelAppointment(appointment.id);
-                actionCell.appendChild(cancelButton);
+                cancelButton.className = 'btn btn-danger';
+                cancelButton.addEventListener('click', () => cancelAppointment(appointment.id));
+                tdAction.appendChild(cancelButton);
+                tr.appendChild(tdAction);
             } else {
-                statusCell.textContent = 'Available';
-                actionCell.textContent = 'N/A';
+                tdStatus.textContent = 'Available';
+                const tdAction = document.createElement('td');
+                tdAction.textContent = '-';
+                tr.appendChild(tdAction);
             }
-            row.appendChild(statusCell);
-            row.appendChild(actionCell);
-            appointmentsTableBody.appendChild(row);
+            tr.appendChild(tdStatus);
+
+            appointmentsTableBody.appendChild(tr);
         });
     }
 
-    window.cancelAppointment = async (id) => {
+    async function cancelAppointment(appointmentId) {
         const response = await fetch('/cancel', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({appointment_id: id})
+            body: JSON.stringify({appointment_id: appointmentId})
         });
 
         const result = await response.json();
         alert(result.message);
-        await loadAppointments();
-    };
+        if (result.status === 'success') {
+            loadAppointments().then(r => {});
+        }
+    }
 
-    document.getElementById('appointment-date').addEventListener('change', loadAppointments);
+    navLogin.addEventListener('click', () => {
+        loginSection.style.display = 'block';
+        registerSection.style.display = 'none';
+        bookingSection.style.display = 'none';
+        appointmentsSection.style.display = 'none';
+    });
+
+    navRegister.addEventListener('click', () => {
+        loginSection.style.display = 'none';
+        registerSection.style.display = 'block';
+        bookingSection.style.display = 'none';
+        appointmentsSection.style.display = 'none';
+    });
+
+    navBookAppointment.addEventListener('click', () => {
+        loginSection.style.display = 'none';
+        registerSection.style.display = 'none';
+        bookingSection.style.display = 'block';
+        appointmentsSection.style.display = 'none';
+    });
+
+    navViewAppointments.addEventListener('click', () => {
+        loginSection.style.display = 'none';
+        registerSection.style.display = 'none';
+        bookingSection.style.display = 'none';
+        appointmentsSection.style.display = 'block';
+        loadAppointments().then(r => {});
+    });
 });
