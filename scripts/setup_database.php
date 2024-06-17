@@ -36,21 +36,15 @@ try {
     }
 
     $queries = [
-        "CREATE TABLE IF NOT EXISTS users (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(50) NOT NULL UNIQUE,
-            password VARCHAR(255) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )",
         "CREATE TABLE IF NOT EXISTS appointments (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
+            text TEXT,
             date DATE NOT NULL,
             start_time TIME NOT NULL,
             end_time TIME NOT NULL,
+            color VARCHAR(255) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id),
-            INDEX idx_user_date_time (user_id, date, start_time, end_time)
+            INDEX idx_date_time (date, start_time, end_time)
         )"
     ];
 
