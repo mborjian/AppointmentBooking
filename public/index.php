@@ -84,11 +84,7 @@ function bookAppointment(): void
     $text = $data['text'] ?? null;
 
     if ($date && $startTime && $endTime && $text) {
-        if ($appointmentController->bookAppointment($date, $startTime, $endTime, $text)) {
-            echo json_encode(['status' => 'success', 'message' => 'Appointment booked successfully']);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Error booking appointment']);
-        }
+        echo $appointmentController->bookAppointment($date, $startTime, $endTime, $text);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Missing required parameters']);
     }
@@ -102,11 +98,7 @@ function cancelAppointment(): void
     $appointmentId = $data['appointment_id'] ?? null;
 
     if ($appointmentId) {
-        if ($appointmentController->cancelAppointment($appointmentId)) {
-            echo json_encode(['status' => 'success', 'message' => 'Appointment cancelled successfully']);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Error cancelling appointment']);
-        }
+        echo $appointmentController->cancelAppointment($appointmentId);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Missing appointment_id']);
     }

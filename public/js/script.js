@@ -1,28 +1,34 @@
+let scheduleConfig = {
+    startTime: '06:00',
+    endTime: '18:00'
+};
+
 document.addEventListener('DOMContentLoaded', function () {
     fetch('/index.php?action=current_week')
         .then(response => response.json())
         .then(data => {
             const dates = data.dates;
             const interval_count = data.interval_count;
-            const start_time = data.start_time;
-            const end_time = data.end_time;
             const appointments = data.appointments;
-            
+
+            scheduleConfig.startTime = data.start_time
+            scheduleConfig.endTime = data.end_time
+
             document.documentElement.style.setProperty('--numHours', interval_count);
 
-            populateCalendar(dates, interval_count, start_time, end_time, appointments);
+            populateCalendar(dates, interval_count, appointments);
         })
         .catch(error => console.error('Error fetching current week:', error));
 });
 
-function populateCalendar(dates, interval_count, start_time, end_time, appointments) {
+function populateCalendar(dates, interval_count, appointments) {
     const daysOfWeek = ['شنبه', 'یک‌شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
     const calendarContainer = document.querySelector('.calendar .days');
     const timelineContainer = document.querySelector('.calendar .timeline');
 
-    const startHour = parseInt(start_time.split(':')[0]);
-    const endHour = parseInt(end_time.split(':')[0]);
-    const endMinute = parseInt(end_time.split(':')[1]);
+    const startHour = parseInt(scheduleConfig.startTime.split(':')[0]);
+    const endHour = parseInt(scheduleConfig.endTime.split(':')[0]);
+    const endMinute = parseInt(scheduleConfig.endTime.split(':')[1]);
 
     for (let hour = startHour; hour <= endHour; hour++) {
         for (let minute = 0; minute < 60; minute += 30) {
@@ -90,16 +96,13 @@ function populateCalendar(dates, interval_count, start_time, end_time, appointme
         calendarContainer.appendChild(dayElement);
     });
 
-    console.log(appointments)
-
     appointments.forEach(appointment => {
         createAppointment(
             appointment.start,
             appointment.end,
             appointment.date,
             appointment.text,
-            appointment.bgColor,
-            start_time
+            appointment.bgColor
         );
     });
 
@@ -113,13 +116,13 @@ function populateCalendar(dates, interval_count, start_time, end_time, appointme
     });
 }
 
-function createAppointment(startTime, endTime, date, text, bgColor, start_time) {
+function createAppointment(startTime, endTime, date, text, bgColor) {
     const startHour = parseInt(startTime.split(':')[0]);
     const startMinute = parseInt(startTime.split(':')[1]);
     const endHour = parseInt(endTime.split(':')[0]);
     const endMinute = parseInt(endTime.split(':')[1]);
 
-    const startHourGlobal = parseInt(start_time.split(':')[0]);
+    const startHourGlobal = parseInt(scheduleConfig.startTime.split(':')[0]);
     const startRow = (startHour - startHourGlobal) * 2 + (startMinute === 30 ? 1 : 0) + 1;
     const endRow = (endHour - startHourGlobal) * 2 + (endMinute === 30 ? 1 : 0) + 1;
 
@@ -142,6 +145,10 @@ function createAppointment(startTime, endTime, date, text, bgColor, start_time) 
         eventElement.style.gridRowEnd = endRow;
 
         const eventsContainer = targetDay.querySelector('.events');
+
+        eventElement.dataset.time = startTime;
+        eventElement.dataset.date = date;
+
         eventsContainer.appendChild(eventElement);
 
         let occupiedCells = targetDay.dataset.occupiedCells ? targetDay.dataset.occupiedCells.split(',') : [];
@@ -158,7 +165,91 @@ function createAppointment(startTime, endTime, date, text, bgColor, start_time) 
 }
 
 function openModal(startTime, date) {
-    console.log('Start Time:', startTime);
-    console.log('Date:', date);
-    alert('Clicked on ' + startTime + ' on ' + date);
+    document.getElementById('startTime').value = startTime;
+
+    const durationSelect = document.getElementById('duration');
+    durationSelect.innerHTML = '';
+
+    const eventElements = document.querySelectorAll(`.event[data-date="${date}"]:not(.empty)`);
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const startTimeInMinutes = startHour * 60 + startMinute;
+
+    let nextAppointmentTimeInMinutes = null;
+
+    eventElements.forEach(eventElement => {
+        const [eventHour, eventMinute] = eventElement.dataset.time.split(':').map(Number);
+        const eventTimeInMinutes = eventHour * 60 + eventMinute;
+
+        if (eventTimeInMinutes > startTimeInMinutes) {
+            nextAppointmentTimeInMinutes = eventTimeInMinutes;
+        }
+    });
+
+    let maxDuration = 0;
+    const endOfDayInMinutes = parseInt(scheduleConfig.endTime.split(':')[0]) * 60 + parseInt(scheduleConfig.endTime.split(':')[1]);
+
+    if (nextAppointmentTimeInMinutes !== null) {
+        maxDuration = nextAppointmentTimeInMinutes - startTimeInMinutes;
+    } else {
+        maxDuration = endOfDayInMinutes - startTimeInMinutes;
+    }
+
+    for (let i = 1; i <= maxDuration / 30; i++) {
+        const option = document.createElement('option');
+        option.value = (i * 30).toString();
+        option.textContent = i * 0.5 + ' hours';
+        durationSelect.appendChild(option);
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('appointmentModal'));
+    modal.show();
+
+    const form = document.getElementById('appointmentForm');
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const duration = parseInt(durationSelect.value);
+        const text = document.getElementById('text').value;
+
+        if (!text.trim()) {
+            alert('Please enter a description.');
+            return;
+        }
+
+        const endTimeInMinutes = startTimeInMinutes + duration;
+        const endHour = Math.floor(endTimeInMinutes / 60);
+        const endMinute = endTimeInMinutes % 60;
+        const endTime = ('0' + endHour).slice(-2) + ':' + ('0' + endMinute).slice(-2);
+
+        const appointmentData = {
+            start_time: startTime,
+            end_time: endTime,
+            text: text,
+            date: date
+        };
+
+        fetch('/index.php?action=book', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(appointmentData),
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Appointment booked successfully:', data);
+                modal.hide();
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error booking appointment:', error);
+                alert('Error booking appointment. Please try again later.');
+            });
+    });
 }
+

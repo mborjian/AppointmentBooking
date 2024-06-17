@@ -24,6 +24,36 @@
     </div>
 </div>
 
+
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-labelledby="appointmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="appointmentModalLabel">Book Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="appointmentForm">
+                    <div class="mb-3">
+                        <label for="startTime" class="form-label">Start Time:</label>
+                        <input type="text" class="form-control" id="startTime" name="startTime" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="duration" class="form-label">Duration:</label>
+                        <select class="form-select" id="duration" name="duration">
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="text" class="form-label">Text:</label>
+                        <input type="text" class="form-control" id="text" name="text" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Book Appointment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="js/bootstrap.bundle.min.js"></script>
 <script src="js/script.js"></script>
 </body>
