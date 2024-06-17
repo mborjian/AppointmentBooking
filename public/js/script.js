@@ -50,7 +50,7 @@ function populateCalendar(dates, interval_count, appointments) {
 
         const dateElement = document.createElement('div');
         dateElement.classList.add('date');
-        dateElement.innerHTML = `<p class="date-day">1<br>${daysOfWeek[index]}</p>`;
+        dateElement.innerHTML = `<p class="date-day">${convertGregorianToShamsi(date)}<br>${daysOfWeek[index]}</p>`;
         dayElement.appendChild(dateElement);
 
         const eventsContainer = document.createElement('div');
@@ -98,6 +98,7 @@ function populateCalendar(dates, interval_count, appointments) {
 
     appointments.forEach(appointment => {
         createAppointment(
+            appointment.id,
             appointment.start,
             appointment.end,
             appointment.date,
@@ -116,7 +117,16 @@ function populateCalendar(dates, interval_count, appointments) {
     });
 }
 
-function createAppointment(startTime, endTime, date, text, bgColor) {
+function convertGregorianToShamsi(gregorianDate) {
+    const gregorianParts = gregorianDate.split('').map(Number);
+    const year = gregorianParts[0] * 1000 + gregorianParts[1] * 100 + gregorianParts[2] * 10 + gregorianParts[3];
+    const month = gregorianParts[4] * 10 + gregorianParts[5];
+    const day = gregorianParts[6] * 10 + gregorianParts[7];
+    const d = new Date(year, month - 1, day);
+    return new Intl.DateTimeFormat('fa-IR').format(d);
+}
+
+function createAppointment(id, startTime, endTime, date, text, bgColor) {
     const startHour = parseInt(startTime.split(':')[0]);
     const startMinute = parseInt(startTime.split(':')[1]);
     const endHour = parseInt(endTime.split(':')[0]);
@@ -138,8 +148,24 @@ function createAppointment(startTime, endTime, date, text, bgColor) {
     if (targetDay) {
         const eventElement = document.createElement('div');
         eventElement.classList.add('event');
-        eventElement.innerHTML = `<p class="title">${text}</p><p class="time">${startTime} - ${endTime}</p>`;
+        eventElement.innerHTML = `<p class="title">${text}</p>`;
         eventElement.style.backgroundColor = bgColor;
+
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'X';
+        cancelButton.classList.add('btn', 'btn-sm', 'btn-danger');
+        cancelButton.addEventListener('click', function () {
+            cancelAppointment(id, function (success) {
+                if (success) {
+                    eventElement.remove();
+                    updateOccupiedCells(targetDay, startTime, endTime, false);
+                } else {
+                    alert('Error canceling appointment. Please try again later.');
+                }
+            });
+        });
+
+        eventElement.appendChild(cancelButton);
 
         eventElement.style.gridRowStart = startRow;
         eventElement.style.gridRowEnd = endRow;
@@ -151,18 +177,35 @@ function createAppointment(startTime, endTime, date, text, bgColor) {
 
         eventsContainer.appendChild(eventElement);
 
-        let occupiedCells = targetDay.dataset.occupiedCells ? targetDay.dataset.occupiedCells.split(',') : [];
-        for (let hour = startHour; hour < endHour; hour++) {
-            for (let minute = (hour === startHour ? startMinute : 0); minute < 60; minute += 30) {
-                const time = ('0' + hour).slice(-2) + ':' + ('0' + minute).slice(-2);
-                occupiedCells.push(time);
-            }
-        }
-        targetDay.dataset.occupiedCells = occupiedCells.join(',');
+        updateOccupiedCells(targetDay, startTime, endTime, true);
     } else {
         console.error('Target day not found:', date);
     }
 }
+
+function updateOccupiedCells(targetDay, startTime, endTime, add) {
+    const startHour = parseInt(startTime.split(':')[0]);
+    const startMinute = parseInt(startTime.split(':')[1]);
+    const endHour = parseInt(endTime.split(':')[0]);
+    const endMinute = parseInt(endTime.split(':')[1]);
+
+    let occupiedCells = targetDay.dataset.occupiedCells ? targetDay.dataset.occupiedCells.split(',') : [];
+    for (let hour = startHour; hour < endHour; hour++) {
+        for (let minute = (hour === startHour ? startMinute : 0); minute < 60; minute += 30) {
+            const time = ('0' + hour).slice(-2) + ':' + ('0' + minute).slice(-2);
+            if (add) {
+                occupiedCells.push(time);
+            } else {
+                const index = occupiedCells.indexOf(time);
+                if (index > -1) {
+                    occupiedCells.splice(index, 1);
+                }
+            }
+        }
+    }
+    targetDay.dataset.occupiedCells = occupiedCells.join(',');
+}
+
 
 function openModal(startTime, date) {
     document.getElementById('startTime').value = startTime;
@@ -253,3 +296,34 @@ function openModal(startTime, date) {
     });
 }
 
+
+function cancelAppointment(appointmentID, callback) {
+    console.log(appointmentID);
+
+    fetch('/index.php?action=cancel', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({appointment_id: appointmentID}),
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('Appointment canceled successfully:', data);
+                callback(true);
+            } else {
+                console.error('Error canceling appointment:', data.message);
+                callback(false);
+            }
+        })
+        .catch(error => {
+            console.error('Error canceling appointment:', error);
+            callback(false);
+        });
+}

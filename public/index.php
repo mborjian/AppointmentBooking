@@ -38,7 +38,7 @@ function getCurrentWeek(): void
 {
     global $config, $appointmentController;
 
-    $startOfWeek = (new DateTime())->modify('this saturday');
+    $startOfWeek = (new DateTime())->modify('last saturday');
 
     $dates = [];
     for ($i = 0; $i < 7; $i++) {

@@ -43,6 +43,7 @@ class AppointmentController
             $endTime = DateTime::createFromFormat('H:i:s', $appointment['end_time'])->format('H:i');
 
             $formattedAppointments[] = [
+                'id' => $appointment['id'],
                 'start' => $startTime,
                 'end' => $endTime,
                 'date' => $date,
