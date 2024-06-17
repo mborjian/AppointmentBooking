@@ -4,6 +4,7 @@ namespace AppointmentBooking\models;
 
 use AppointmentBooking\database\Connection;
 use PDO;
+use PDOException;
 
 class Appointment
 {
@@ -14,55 +15,71 @@ class Appointment
         $this->db = Connection::getInstance()->getConnection();
     }
 
-    public function bookAppointment($userId, $date, $start_time, $end_time): bool
+    public function bookAppointment($date, $start_time, $end_time, $text): bool
     {
-        if (strtotime($end_time) <= strtotime($start_time)) {
+        try {
+            if (strtotime($end_time) <= strtotime($start_time)) {
+                return false;
+            }
+
+            $stmt = $this->db->prepare(
+                'SELECT COUNT(*) FROM appointments WHERE date = :date 
+                AND ((start_time < :end_time AND end_time > :start_time))'
+            );
+
+            $stmt->execute([
+                'date' => $date,
+                'start_time' => $start_time,
+                'end_time' => $end_time
+            ]);
+
+            if ($stmt->fetchColumn() > 0) {
+                return false;
+            }
+
+            $stmt = $this->db->prepare(
+                'INSERT INTO appointments (date, start_time, end_time, text) VALUES (:date, :start_time, :end_time, :text)'
+            );
+
+            return $stmt->execute([
+                'date' => $date,
+                'start_time' => $start_time,
+                'end_time' => $end_time,
+                'text' => $text
+            ]);
+        } catch (PDOException $e) {
+            error_log('Error booking appointment: ' . $e->getMessage());
             return false;
         }
-
-        $stmt = $this->db->prepare(
-            'SELECT COUNT(*) FROM appointments WHERE user_id = :user_id AND date = :date AND ((start_time < :end_time AND end_time > :start_time))'
-        );
-
-        $stmt->execute([
-            'user_id' => $userId,
-            'date' => $date,
-            'start_time' => $start_time,
-            'end_time' => $end_time
-        ]);
-
-        if ($stmt->fetchColumn() > 0) {
-            return false;
-        }
-
-        $stmt = $this->db->prepare(
-            'INSERT INTO appointments (user_id, date, start_time, end_time) VALUES (:user_id, :date, :start_time, :end_time)'
-        );
-
-        return $stmt->execute([
-            'user_id' => $userId,
-            'date' => $date,
-            'start_time' => $start_time,
-            'end_time' => $end_time
-        ]);
     }
 
     public function cancelAppointment($appointmentId): bool
     {
-        $stmt = $this->db->prepare(
-            'DELETE FROM appointments WHERE id = :id'
-        );
+        try {
+            $stmt = $this->db->prepare(
+                'DELETE FROM appointments WHERE id = :id'
+            );
 
-        return $stmt->execute(['id' => $appointmentId]);
+            return $stmt->execute(['id' => $appointmentId]);
+        } catch (PDOException $e) {
+            error_log('Error cancelling appointment: ' . $e->getMessage());
+            return false;
+        }
     }
 
-    public function getAppointments($date): false|array
+    public function getAppointments($date): array
     {
-        $stmt = $this->db->prepare(
-            'SELECT * FROM appointments WHERE date = :date'
-        );
-        $stmt->execute(['date' => $date]);
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT * FROM appointments WHERE date = :date'
+            );
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->execute(['date' => $date]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log('Error fetching appointments: ' . $e->getMessage());
+            return [];
+        }
     }
 }

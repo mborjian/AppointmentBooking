@@ -1,319 +1,162 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const registerForm = document.getElementById('register-form');
-    const loginForm = document.getElementById('login-form');
-    const bookingForm = document.getElementById('booking-form');
-    const loginSection = document.getElementById('login-section');
-    const registerSection = document.getElementById('register-section');
-    const bookingSection = document.getElementById('booking-section');
-    const appointmentsSection = document.getElementById('appointments-section');
-    const calendarSection = document.getElementById('calendar-section');
-    const appointmentsTableBody = document.getElementById('appointments-table').querySelector('tbody');
-    const appointmentStartTime = document.getElementById('appointment-start-time');
-    const appointmentEndTime = document.getElementById('appointment-end-time');
-    const navLogin = document.getElementById('nav-login');
-    const navRegister = document.getElementById('nav-register');
-    const navBookAppointment = document.getElementById('nav-book-appointment');
-    const navViewAppointments = document.getElementById('nav-view-appointments');
-    const navLogout = document.getElementById('nav-logout');
-    const navLogoutItem = document.getElementById('nav-logout-item');
+document.addEventListener('DOMContentLoaded', function () {
+    fetch('/index.php?action=current_week')
+        .then(response => response.json())
+        .then(data => {
+            const dates = data.dates;
+            const interval_count = data.interval_count;
+            const start_time = data.start_time;
+            const end_time = data.end_time;
+            const appointments = data.appointments;
 
-    let currentUser = null;
+            document.documentElement.style.setProperty('--numHours', interval_count);
 
-    const timeSlots = generateTimeSlots();
+            populateCalendar(dates, interval_count, start_time, end_time, appointments);
+        })
+        .catch(error => console.error('Error fetching current week:', error));
+});
 
-    function generateTimeSlots() {
-        const slots = [];
-        for (let hour = 8; hour < 18; hour++) {
-            for (let minute = 0; minute < 60; minute += 30) {
-                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                slots.push(time);
+function populateCalendar(dates, interval_count, start_time, end_time, appointments) {
+    const daysOfWeek = ['شنبه', 'یک‌شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+    const calendarContainer = document.querySelector('.calendar .days');
+    const timelineContainer = document.querySelector('.calendar .timeline');
+
+    const startHour = parseInt(start_time.split(':')[0]);
+    const endHour = parseInt(end_time.split(':')[0]);
+    const endMinute = parseInt(end_time.split(':')[1]);
+
+    for (let hour = startHour; hour <= endHour; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+            const time = ('0' + hour).slice(-2) + ':' + ('0' + minute).slice(-2);
+            const timeElement = document.createElement('div');
+            timeElement.textContent = time;
+            timelineContainer.appendChild(timeElement);
+
+            if (hour === endHour && minute === endMinute) {
+                break;
             }
         }
-        return slots;
     }
 
-    function populateTimeSelect(selectElement) {
-        timeSlots.forEach(slot => {
-            const option = document.createElement('option');
-            option.value = slot;
-            option.textContent = slot;
-            selectElement.appendChild(option);
-        });
-    }
+    dates.forEach((date, index) => {
+        const dayElement = document.createElement('div');
+        dayElement.classList.add('day');
+        dayElement.dataset.date = date;
 
-    populateTimeSelect(appointmentStartTime);
-    populateTimeSelect(appointmentEndTime);
+        const dateElement = document.createElement('div');
+        dateElement.classList.add('date');
+        dateElement.innerHTML = `<p class="date-day">1<br>${daysOfWeek[index]}</p>`;
+        dayElement.appendChild(dateElement);
 
-    async function checkAuthStatus() {
-        const response = await fetch('/check-auth', {
-            method: 'GET',
-            headers: {'Content-Type': 'application/json'}
-        });
+        const eventsContainer = document.createElement('div');
+        eventsContainer.classList.add('events');
+        dayElement.appendChild(eventsContainer);
 
-        const result = await response.json();
-        if (result.status === 'authenticated') {
-            currentUser = result.user;
-            navLogoutItem.classList.remove('d-none');
-            navLogin.classList.add('d-none');
-            navRegister.classList.add('d-none');
-            navBookAppointment.classList.remove('d-none');
-            navViewAppointments.classList.remove('d-none');
-            loginSection.classList.add('d-none');
-            registerSection.classList.add('d-none');
-            bookingSection.classList.remove('d-none');
-            appointmentsSection.classList.remove('d-none');
-        } else {
-            currentUser = null;
-            navLogoutItem.classList.add('d-none');
-            navLogin.classList.remove('d-none');
-            navRegister.classList.remove('d-none');
-            navBookAppointment.classList.add('d-none');
-            navViewAppointments.classList.add('d-none');
-            loginSection.classList.remove('d-none');
-            registerSection.classList.add('d-none');
-            bookingSection.classList.add('d-none');
-            appointmentsSection.classList.add('d-none');
-        }
-    }
+        const occupiedCells = [];
+        appointments.forEach(appointment => {
+            if (appointment.date === date) {
+                let currentHour = parseInt(appointment.start.split(':')[0]);
+                let currentMinute = parseInt(appointment.start.split(':')[1]);
+                const endHour = parseInt(appointment.end.split(':')[0]);
+                const endMinute = parseInt(appointment.end.split(':')[1]);
 
-    checkAuthStatus();
-
-    navLogin.addEventListener('click', () => showSection('login'));
-
-    navRegister.addEventListener('click', () => showSection('register'));
-
-    navBookAppointment.addEventListener('click', () => showSection('booking'));
-
-    navViewAppointments.addEventListener('click', () => {
-        showSection('appointments');
-        loadAppointments();
-    });
-
-    navLogout.addEventListener('click', async () => {
-        fetch('logout', {
-            method: 'POST',
-        })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data)
-                if (data.status === 'success') {
-                    currentUser = null;
-                    checkAuthStatus();
-                    showSection('login');
-                } else {
-                    alert(data.message);
-                }
-            });
-    });
-
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const username = document.getElementById('login-username').value;
-        const password = document.getElementById('login-password').value;
-        fetch('login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({username: username, password: password}),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    currentUser = data.user;
-                    checkAuthStatus();
-                    showSection('calendar');
-                } else {
-                    alert(data.message);
-                }
-            });
-    });
-
-
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const username = document.getElementById('reg-username').value;
-        const password = document.getElementById('reg-password').value;
-        fetch('register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({username: username, password: password}),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    currentUser = data.user;
-                    checkAuthStatus();
-                    // showSection('login');
-                } else {
-                    alert(data.message);
-                }
-            });
-    });
-
-    bookingForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!currentUser) {
-            alert('Please log in to book an appointment');
-            return;
-        }
-        const userId = currentUser.id;
-        const date = document.getElementById('appointment-date').value;
-        const startTime = document.getElementById('appointment-start-time').value;
-        const endTime = document.getElementById('appointment-end-time').value;
-
-        if (startTime >= endTime) {
-            alert('End time must be after start time');
-            return;
-        }
-        fetch('book', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({user_id: userId, date: date, start_time: startTime, end_time: endTime}),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert('Appointment booked successfully');
-                    loadAppointments();
-                } else {
-                    alert(data.message);
-                }
-            });
-    });
-
-    async function loadAppointments() {
-
-        var date = document.getElementById('appointment-date-view').value;
-        fetch('appointments?date=' + date)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    var tbody = document.getElementById('appointments-table').querySelector('tbody');
-                    tbody.innerHTML = '';
-                    data.appointments.forEach(function (appointment) {
-                        var tr = document.createElement('tr');
-                        tr.innerHTML = '<td>' + appointment.time + '</td><td>' + appointment.status + '</td><td><button class="btn btn-danger btn-sm" onclick="cancelAppointment(' + appointment.id + ')">Cancel</button></td>';
-                        tbody.appendChild(tr);
-                    });
-                } else {
-                    alert(data.message);
-                }
-            });
-    }
-
-    async function cancelAppointment(appointmentId) {
-        fetch('cancel', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({appointment_id: appointmentId}),
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    loadAppointments();
-                } else {
-                    alert(data.message);
-                }
-            });
-    }
-
-    function showSection(section) {
-        loginSection.classList.add('d-none');
-        registerSection.classList.add('d-none');
-        bookingSection.classList.add('d-none');
-        appointmentsSection.classList.add('d-none');
-        calendarSection.classList.add('d-none');
-
-        switch (section) {
-            case 'login':
-                loginSection.classList.remove('d-none');
-                break;
-            case 'register':
-                registerSection.classList.remove('d-none');
-                break;
-            case 'booking':
-                bookingSection.classList.remove('d-none');
-                break;
-            case 'appointments':
-                appointmentsSection.classList.remove('d-none');
-                break;
-            case 'calendar':
-                calendarSection.classList.remove('d-none');
-                loadCalendar();
-                break;
-        }
-    }
-
-    function loadCalendar() {
-        fetch('calendar')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    var calendar = document.getElementById('calendar');
-                    calendar.innerHTML = '';
-
-                    var timeline = document.createElement('div');
-                    timeline.classList.add('timeline');
-                    for (var i = 7; i < 17; i++) {
-                        var timeSlot = document.createElement('div');
-                        timeSlot.textContent = i + ':00';
-                        timeline.appendChild(timeSlot);
-                        timeSlot = document.createElement('div');
-                        timeSlot.textContent = i + ':30';
-                        timeline.appendChild(timeSlot);
+                while (currentHour < endHour || (currentHour === endHour && currentMinute < endMinute)) {
+                    const time = ('0' + currentHour).slice(-2) + ':' + ('0' + currentMinute).slice(-2);
+                    occupiedCells.push(time);
+                    currentMinute += 30;
+                    if (currentMinute === 60) {
+                        currentMinute = 0;
+                        currentHour += 1;
                     }
-                    calendar.appendChild(timeline);
-
-                    data.days.forEach(function (day) {
-                        var dayColumn = document.createElement('div');
-                        dayColumn.classList.add('day');
-                        dayColumn.textContent = day.name;
-                        calendar.appendChild(dayColumn);
-
-                        var occupiedCells = {};
-
-                        day.appointments.forEach(function (appointment) {
-                            var startTime = appointment.start_time;
-                            var endTime = appointment.end_time;
-                            var startHour = parseInt(startTime.split(':')[0]);
-                            var startMinute = parseInt(startTime.split(':')[1]);
-                            var endHour = parseInt(endTime.split(':')[0]);
-                            var endMinute = parseInt(endTime.split(':')[1]);
-
-                            var startRow = (startHour - 7) * 2 + (startMinute / 30) + 1;
-                            var endRow = (endHour - 7) * 2 + (endMinute / 30) + 1;
-
-                            for (var row = startRow; row < endRow; row++) {
-                                occupiedCells[row] = true;
-                            }
-
-                            var eventDiv = document.createElement('div');
-                            eventDiv.classList.add('event');
-                            eventDiv.style.gridRow = startRow + ' / ' + endRow;
-                            eventDiv.style.backgroundColor = appointment.bgColor;
-                            eventDiv.textContent = appointment.text;
-                            dayColumn.appendChild(eventDiv);
-                        });
-
-                        for (var row = 1; row <= 20; row++) {
-                            if (!occupiedCells[row]) {
-                                var emptyDiv = document.createElement('div');
-                                emptyDiv.classList.add('event', 'empty');
-                                emptyDiv.dataset.startTime = (7 + Math.floor((row - 1) / 2)) + ':' + ((row - 1) % 2) * 30;
-                                dayColumn.appendChild(emptyDiv);
-                            }
-                        }
-                    });
-                } else {
-                    alert(data.message);
                 }
-            });
+            }
+        });
+
+        for (let hour = startHour; hour <= endHour; hour++) {
+            for (let minute = 0; minute < 60; minute += 30) {
+                const time = ('0' + hour).slice(-2) + ':' + ('0' + minute).slice(-2);
+                if (hour === endHour && minute >= endMinute) {
+                    break;
+                }
+                if (!occupiedCells.includes(time)) {
+                    const eventElement = document.createElement('div');
+                    eventElement.classList.add('event', 'empty');
+                    eventElement.dataset.time = time;
+                    eventElement.dataset.date = date;
+                    eventsContainer.appendChild(eventElement);
+                }
+            }
+        }
+
+        calendarContainer.appendChild(dayElement);
+    });
+
+    appointments.forEach(appointment => {
+        createAppointment(
+            appointment.start,
+            appointment.end,
+            appointment.date,
+            appointment.text,
+            appointment.bgColor,
+            start_time
+        );
+    });
+
+    const emptyEvents = document.querySelectorAll('.event.empty');
+    emptyEvents.forEach(emptyEvent => {
+        emptyEvent.addEventListener('click', function () {
+            const startTime = emptyEvent.dataset.time;
+            const date = emptyEvent.dataset.date;
+            openModal(startTime, date);
+        });
+    });
+}
+
+function createAppointment(startTime, endTime, date, text, bgColor, start_time) {
+    const startHour = parseInt(startTime.split(':')[0]);
+    const startMinute = parseInt(startTime.split(':')[1]);
+    const endHour = parseInt(endTime.split(':')[0]);
+    const endMinute = parseInt(endTime.split(':')[1]);
+
+    const startHourGlobal = parseInt(start_time.split(':')[0]);
+    const startRow = (startHour - startHourGlobal) * 2 + (startMinute === 30 ? 1 : 0) + 1;
+    const endRow = (endHour - startHourGlobal) * 2 + (endMinute === 30 ? 1 : 0) + 1;
+
+    const days = document.querySelectorAll('.day');
+    let targetDay = null;
+    for (let i = 0; i < days.length; i++) {
+        if (days[i].dataset.date === date) {
+            targetDay = days[i];
+            break;
+        }
     }
-});
+
+    if (targetDay) {
+        const eventElement = document.createElement('div');
+        eventElement.classList.add('event');
+        eventElement.innerHTML = `<p class="title">${text}</p><p class="time">${startTime} - ${endTime}</p>`;
+        eventElement.style.backgroundColor = bgColor;
+
+        eventElement.style.gridRowStart = startRow;
+        eventElement.style.gridRowEnd = endRow;
+
+        const eventsContainer = targetDay.querySelector('.events');
+        eventsContainer.appendChild(eventElement);
+
+        let occupiedCells = targetDay.dataset.occupiedCells ? targetDay.dataset.occupiedCells.split(',') : [];
+        for (let hour = startHour; hour < endHour; hour++) {
+            for (let minute = (hour === startHour ? startMinute : 0); minute < 60; minute += 30) {
+                const time = ('0' + hour).slice(-2) + ':' + ('0' + minute).slice(-2);
+                occupiedCells.push(time);
+            }
+        }
+        targetDay.dataset.occupiedCells = occupiedCells.join(',');
+    } else {
+        console.error('Target day not found:', date);
+    }
+}
+
+function openModal(startTime, date) {
+    console.log('Start Time:', startTime);
+    console.log('Date:', date);
+    alert('Clicked on ' + startTime + ' on ' + date);
+}
