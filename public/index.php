@@ -18,10 +18,6 @@ if ($method === 'GET') {
     if ($uri === 'current_week') {
         getCurrentWeek();
     }
-
-    if ($uri === 'appointments') {
-        getAppointments();
-    }
 }
 
 if ($method === 'POST') {
@@ -40,14 +36,13 @@ if ($method === 'DELETE') {
 
 function getCurrentWeek(): void
 {
-    global $config;
-    $today = new DateTime();
-    $startOfWeek = $today->modify('this saturday');
+    global $config, $appointmentController;
+
+    $startOfWeek = (new DateTime())->modify('this saturday');
 
     $dates = [];
-    $dates[] = $startOfWeek->format('Ymd');
-    for ($i = 1; $i < 7; $i++) {
-        $date = $startOfWeek->modify('+1 day')->format('Ymd');
+    for ($i = 0; $i < 7; $i++) {
+        $date = (clone $startOfWeek)->modify('+' . $i . ' day')->format('Ymd');
         $dates[] = $date;
     }
 
@@ -61,11 +56,10 @@ function getCurrentWeek(): void
     $period = new DatePeriod($start, $interval, $end);
     $interval_count = iterator_count($period) + 1;
 
-    $appointments = [
-        ['start' => '10:00', 'end' => '12:00', 'date' => '20240622', 'text' => 'Corporate Finance', 'bgColor' => '#ffd6d1'],
-        ['start' => '13:00', 'end' => '16:30', 'date' => '20240623', 'text' => 'Entertainment Law', 'bgColor' => '#fafaa3'],
-        ['start' => '11:00', 'end' => '12:00', 'date' => '20240624', 'text' => 'Writing Seminar', 'bgColor' => '#e2f8ff'],
-    ];
+
+    $appointments = $appointmentController->getAppointments(
+        $startOfWeek->format('Y-m-d'), $startOfWeek->modify('+6 days')->format('Y-m-d')
+    );
 
     $response = [
         'dates' => $dates,
@@ -78,18 +72,6 @@ function getCurrentWeek(): void
     echo json_encode($response);
 }
 
-function getAppointments(): void
-{
-    global $appointmentController;
-    $date = $_GET['date'] ?? null;
-
-    if ($date !== null) {
-        $appointments = $appointmentController->getAppointments($date);
-        echo json_encode($appointments);
-    } else {
-        echo json_encode(['status' => 'error', 'message' => 'Date parameter missing']);
-    }
-}
 
 function bookAppointment(): void
 {

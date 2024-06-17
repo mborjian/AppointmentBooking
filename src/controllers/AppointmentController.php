@@ -3,6 +3,7 @@
 namespace AppointmentBooking\controllers;
 
 use AppointmentBooking\models\Appointment;
+use DateTime;
 
 class AppointmentController
 {
@@ -31,9 +32,25 @@ class AppointmentController
         return json_encode(['status' => 'error', 'message' => 'Error cancelling appointment']);
     }
 
-    public function getAppointments($date): false|string
+    public function getAppointments($startDate, $endDate): array
     {
-        $appointments = $this->appointmentModel->getAppointments($date);
-        return json_encode($appointments);
+        $appointments = $this->appointmentModel->getAppointmentsByDateRange($startDate, $endDate);
+
+        $formattedAppointments = [];
+        foreach ($appointments as $appointment) {
+            $date = DateTime::createFromFormat('Y-m-d', $appointment['date'])->format('Ymd');
+            $startTime = DateTime::createFromFormat('H:i:s', $appointment['start_time'])->format('H:i');
+            $endTime = DateTime::createFromFormat('H:i:s', $appointment['end_time'])->format('H:i');
+
+            $formattedAppointments[] = [
+                'start' => $startTime,
+                'end' => $endTime,
+                'date' => $date,
+                'text' => $appointment['text'],
+                'bgColor' => $appointment['color'],
+            ];
+        }
+
+        return $formattedAppointments;
     }
 }

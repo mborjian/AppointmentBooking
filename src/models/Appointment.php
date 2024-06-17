@@ -22,6 +22,7 @@ class Appointment
                 return false;
             }
 
+            $color = '#' . str_pad(dechex(rand(0, 0xFFFFFF)), 6, '0', STR_PAD_LEFT);
             $stmt = $this->db->prepare(
                 'SELECT COUNT(*) FROM appointments WHERE date = :date 
                 AND ((start_time < :end_time AND end_time > :start_time))'
@@ -38,20 +39,22 @@ class Appointment
             }
 
             $stmt = $this->db->prepare(
-                'INSERT INTO appointments (date, start_time, end_time, text) VALUES (:date, :start_time, :end_time, :text)'
+                'INSERT INTO appointments (date, start_time, end_time, text, color) VALUES (:date, :start_time, :end_time, :text, :color)'
             );
 
             return $stmt->execute([
                 'date' => $date,
                 'start_time' => $start_time,
                 'end_time' => $end_time,
-                'text' => $text
+                'text' => $text,
+                'color' => $color
             ]);
         } catch (PDOException $e) {
             error_log('Error booking appointment: ' . $e->getMessage());
             return false;
         }
     }
+
 
     public function cancelAppointment($appointmentId): bool
     {
@@ -81,5 +84,21 @@ class Appointment
             error_log('Error fetching appointments: ' . $e->getMessage());
             return [];
         }
+    }
+
+
+    public function getAppointmentsByDateRange($startDate, $endDate): array
+    {
+        $sql = "SELECT * FROM appointments 
+                WHERE date >= :startDate AND date <= :endDate
+                ORDER BY date, start_time ASC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const start_time = data.start_time;
             const end_time = data.end_time;
             const appointments = data.appointments;
-
+            
             document.documentElement.style.setProperty('--numHours', interval_count);
 
             populateCalendar(dates, interval_count, start_time, end_time, appointments);
@@ -89,6 +89,8 @@ function populateCalendar(dates, interval_count, start_time, end_time, appointme
 
         calendarContainer.appendChild(dayElement);
     });
+
+    console.log(appointments)
 
     appointments.forEach(appointment => {
         createAppointment(

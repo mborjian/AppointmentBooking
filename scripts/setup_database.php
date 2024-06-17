@@ -42,6 +42,7 @@ try {
             date DATE NOT NULL,
             start_time TIME NOT NULL,
             end_time TIME NOT NULL,
+            color VARCHAR(255) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_date_time (date, start_time, end_time)
         )"
