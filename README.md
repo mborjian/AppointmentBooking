@@ -31,3 +31,6 @@ php scripts/setup_database.php --drop
 ```bash
 php -S localhost:8000 -t public
 ```
+
+Browse this link:
+http://localhost:8000/index.html
